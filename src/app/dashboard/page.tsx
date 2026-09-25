@@ -10,6 +10,7 @@ export default function DashboardPage() {
   const [isPaid, setIsPaid] = useState(false);
   const [qrUrl, setQrUrl] = useState('');
   const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null);
+  const [suggestedMatch, setSuggestedMatch] = useState<any>(null);
 
   // New States for Ledger and Collision
   const [ledger, setLedger] = useState<any[]>([]);
@@ -65,6 +66,7 @@ export default function DashboardPage() {
       setGeneratedAmount(amountVal);
       setActiveInvoiceId(data.id);
       setIsPaid(false);
+      setSuggestedMatch(null);
 
       const origin = typeof window !== 'undefined' ? window.location.origin : 'https://surakshpay.in';
       const invoiceUrl = `${origin}/invoice/${data.id}?acc=${merchantAccount}&ifsc=${merchantIFSC}`;
@@ -78,7 +80,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!activeInvoiceId) return;
 
-    const channel = supabase
+    const invoiceChannel = supabase
       .channel('payment_listener')
       .on(
         'postgres_changes',
@@ -92,10 +94,25 @@ export default function DashboardPage() {
       )
       .subscribe();
 
+    const bankChannel = supabase
+      .channel('bank_listener')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'bank_transactions' },
+        (payload) => {
+          setLedger((prev) => [payload.new, ...prev].slice(0, 6));
+          if (payload.new.amount === generatedAmount && payload.new.status === 'unmatched') {
+            setSuggestedMatch(payload.new);
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(invoiceChannel);
+      supabase.removeChannel(bankChannel);
     };
-  }, [activeInvoiceId]);
+  }, [activeInvoiceId, generatedAmount]);
 
   // Collision Handling
   const openManualModal = async () => {
@@ -208,6 +225,19 @@ export default function DashboardPage() {
                       {qrUrl ? <a href={`/invoice/${activeInvoiceId}?acc=${merchantAccount}&ifsc=${merchantIFSC}`} target="_blank" rel="noreferrer"><img src={qrUrl} alt="Smart Invoice QR" className="w-48 h-48 md:w-56 md:h-56 object-contain" /></a> : <div className="w-48 h-48 bg-slate-100 animate-pulse rounded-xl"></div>}
                     </div>
                   </div>
+
+                  {suggestedMatch && !isPaid && (
+                    <div className="w-full mt-2 mb-6 bg-green-50 border-2 border-green-500 rounded-2xl p-4 text-center">
+                      <p className="text-sm font-bold text-green-700 uppercase tracking-widest mb-1">Incoming Payment Detected</p>
+                      <p className="text-2xl font-black text-slate-900 mb-3">{suggestedMatch.sender_name}</p>
+                      <button 
+                        onClick={() => handleManualMatch(suggestedMatch)}
+                        className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-wider rounded-xl shadow-lg shadow-green-500/30 transition-all active:scale-95"
+                      >
+                        Confirm Name & Accept
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="w-full max-w-3xl mt-6 flex justify-between items-center gap-4">
