@@ -66,8 +66,9 @@ export default function DashboardPage() {
       setActiveInvoiceId(data.id);
       setIsPaid(false);
 
-      const upiString = `upi://pay?pa=eashanmoon@ybl&pn=SurakshPay&am=${amountVal}&cu=INR`;
-      setQrUrl(`https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encodeURIComponent(upiString)}`);
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://surakshpay.in';
+      const invoiceUrl = `${origin}/invoice/${data.id}?acc=${merchantAccount}&ifsc=${merchantIFSC}`;
+      setQrUrl(`https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encodeURIComponent(invoiceUrl)}`);
     } catch (err) {
       console.error("Database Error:", err);
     }
