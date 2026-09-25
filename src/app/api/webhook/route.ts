@@ -11,8 +11,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 1. EXTRACT AMOUNT (Matches "Rs 50,000" or "INR 50000.00")
-    const amountMatch = raw_sms.match(/(?:Rs\.?|INR)\s*([\d,]+(?:\.\d+)?)/i);
+    // 1. EXTRACT AMOUNT (Matches "Rs 50,000", "INR 50000.00", or "₹50")
+    const amountMatch = raw_sms.match(/(?:Rs\.?|INR|₹)\s*([\d,]+(?:\.\d+)?)/i);
     if (!amountMatch) return NextResponse.json({ error: 'No amount found' }, { status: 400 });
     const amount = parseFloat(amountMatch[1].replace(/,/g, ''));
 
