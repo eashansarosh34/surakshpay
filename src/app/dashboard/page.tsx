@@ -20,6 +20,7 @@ export default function DashboardPage() {
   // MERCHANT DETAILS
   const merchantAccount = "41814643181";
   const merchantIFSC = "SBIN0020514";
+  const merchantBank = "State Bank of India (SBI)";
 
   const playVoiceAlert = (amount: number) => {
     try {
@@ -69,7 +70,7 @@ export default function DashboardPage() {
       setSuggestedMatch(null);
 
       const origin = typeof window !== 'undefined' ? window.location.origin : 'https://surakshpay.in';
-      const invoiceUrl = `${origin}/invoice/${data.id}?acc=${merchantAccount}&ifsc=${merchantIFSC}`;
+      const invoiceUrl = `${origin}/invoice/${data.id}?acc=${merchantAccount}&ifsc=${merchantIFSC}&bank=${encodeURIComponent(merchantBank)}`;
       setQrUrl(`https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encodeURIComponent(invoiceUrl)}`);
     } catch (err) {
       console.error("Database Error:", err);

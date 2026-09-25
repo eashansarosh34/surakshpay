@@ -6,6 +6,7 @@ import { Check, Copy, ShieldCheck, Building2 } from 'lucide-react';
 export default function InvoicePage({ params }: { params: { id: string } }) {
   const [acc, setAcc] = useState('');
   const [ifsc, setIfsc] = useState('');
+  const [bank, setBank] = useState('');
   const [copiedAcc, setCopiedAcc] = useState(false);
   const [copiedIfsc, setCopiedIfsc] = useState(false);
   const [amount, setAmount] = useState('0');
@@ -14,6 +15,7 @@ export default function InvoicePage({ params }: { params: { id: string } }) {
     const urlParams = new URLSearchParams(window.location.search);
     setAcc(urlParams.get('acc') || '41814643181');
     setIfsc(urlParams.get('ifsc') || 'SBIN0020514');
+    setBank(urlParams.get('bank') || 'State Bank of India (SBI)');
     
     // In a real app we'd fetch the exact amount from Supabase using the invoice ID
     // For this UI demo, we can just say "Scan complete" or fetch it
@@ -56,6 +58,14 @@ export default function InvoicePage({ params }: { params: { id: string } }) {
           <h2 className="font-black text-lg mb-6 text-center">Copy Bank Details</h2>
           
           <div className="space-y-5">
+            {/* BANK NAME */}
+            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 flex justify-between items-center group">
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Bank Name</p>
+                <p className="font-mono font-black text-xl tracking-wider text-slate-700">{bank}</p>
+              </div>
+            </div>
+
             {/* ACCOUNT NUMBER */}
             <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 flex justify-between items-center group">
               <div>
