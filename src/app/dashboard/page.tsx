@@ -240,16 +240,16 @@ export default function DashboardPage() {
                     <div className="w-full mt-2 mb-6 bg-green-50 border-2 border-green-500 rounded-2xl p-4 text-center">
                       <p className="text-sm font-bold text-green-700 uppercase tracking-widest mb-1">Incoming Payment Detected</p>
                       <p className="text-2xl font-black text-slate-900 mb-3">₹{suggestedMatch.amount} from {suggestedMatch.sender_name}</p>
-                      <div className="flex gap-3">
+                      <div className="flex flex-col sm:flex-row gap-3">
                         <button 
                           onClick={() => setSuggestedMatch(null)}
-                          className="flex-1 py-3 bg-white hover:bg-slate-100 text-slate-700 border-2 border-slate-200 font-bold uppercase tracking-wider rounded-xl transition-all active:scale-95"
+                          className="w-full py-3 bg-white hover:bg-slate-100 text-slate-700 border-2 border-slate-200 font-bold uppercase tracking-wider rounded-xl transition-all active:scale-95"
                         >
                           Waitlist
                         </button>
                         <button 
                           onClick={() => handleManualMatch(suggestedMatch)}
-                          className="flex-[2] py-3 bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-wider rounded-xl shadow-lg shadow-green-500/30 transition-all active:scale-95"
+                          className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-wider rounded-xl shadow-lg shadow-green-500/30 transition-all active:scale-95"
                         >
                           Confirm & Accept
                         </button>
