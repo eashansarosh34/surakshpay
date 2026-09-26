@@ -143,6 +143,13 @@ export default function DashboardPage() {
     fetchLedger();
   };
 
+  const handleLedgerConfirm = async (tx: any) => {
+    // This ONLY updates the ledger row. It does NOT touch the active bill on screen.
+    // It does NOT play a sound. It just marks it as dealt with.
+    await supabase.from('bank_transactions').update({ status: 'matched' }).eq('id', tx.id);
+    fetchLedger();
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans pb-24 relative">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -295,12 +302,12 @@ export default function DashboardPage() {
                     </td>
                     <td className="py-4 text-slate-400">{new Date(tx.created_at).toLocaleTimeString()}</td>
                     <td className="py-4 text-right">
-                      {tx.status === 'unmatched' && activeInvoiceId && !isPaid && (
+                      {tx.status === 'unmatched' && (
                         <button 
-                          onClick={() => handleManualMatch(tx)} 
-                          className="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-3 py-2 rounded-lg transition-all"
+                          onClick={() => handleLedgerConfirm(tx)} 
+                          className="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded-lg transition-all"
                         >
-                          Match to Bill
+                          Confirm
                         </button>
                       )}
                     </td>
