@@ -16,6 +16,8 @@ export default function DashboardPage() {
   const [ledger, setLedger] = useState<any[]>([]);
   const [showManualModal, setShowManualModal] = useState(false);
   const [unmatchedTxs, setUnmatchedTxs] = useState<any[]>([]);
+  const [showMonthlyReport, setShowMonthlyReport] = useState(false);
+  const [monthlyTxs, setMonthlyTxs] = useState<any[]>([]);
 
   // MERCHANT DETAILS
   const merchantAccount = "41814643181";
@@ -172,6 +174,46 @@ export default function DashboardPage() {
     fetchLedger();
   };
 
+  const openMonthlyReport = async () => {
+    setShowMonthlyReport(true);
+    
+    // Get first day of current month
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    
+    const { data } = await supabase
+      .from('bank_transactions')
+      .select('*')
+      .gte('created_at', startOfMonth)
+      .order('created_at', { ascending: false })
+      .limit(1000);
+      
+    if (data) setMonthlyTxs(data);
+  };
+
+  const downloadCsv = () => {
+    if (monthlyTxs.length === 0) return;
+    const headers = ['Date', 'Amount', 'Sender', 'Status'];
+    const csvContent = [
+      headers.join(','),
+      ...monthlyTxs.map(tx => [
+        new Date(tx.created_at).toLocaleString().replace(/,/g, ''),
+        tx.amount,
+        `"${tx.sender_name}"`,
+        tx.status
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Monthly_Report_${new Date().toLocaleString('default', { month: 'short', year: 'numeric' })}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans pb-24 relative">
       <div className="max-w-7xl mx-auto space-y-6">
@@ -295,9 +337,17 @@ export default function DashboardPage() {
 
         {/* BOTTOM LEDGER */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          <div className="flex items-center gap-2 mb-6 text-slate-800">
-            <FileText size={20} />
-            <h2 className="font-bold text-lg">Live Transaction Ledger</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-2 text-slate-800">
+              <FileText size={20} />
+              <h2 className="font-bold text-lg">Live Transaction Ledger</h2>
+            </div>
+            <button 
+              onClick={openMonthlyReport} 
+              className="bg-blue-50 text-blue-600 hover:bg-blue-100 font-bold px-4 py-2 rounded-xl text-sm transition-colors border border-blue-200"
+            >
+              Monthly Report ▼
+            </button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -379,6 +429,66 @@ export default function DashboardPage() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MONTHLY REPORT MODAL */}
+      {showMonthlyReport && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <div>
+                <h3 className="font-black text-xl text-slate-800">Monthly Report</h3>
+                <p className="text-sm text-slate-500 mt-1">Transactions for {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={downloadCsv}
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-xl text-sm transition-all shadow-sm"
+                >
+                  Download CSV
+                </button>
+                <button onClick={() => setShowMonthlyReport(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors"><X size={24} className="text-slate-500" /></button>
+              </div>
+            </div>
+            
+            <div className="p-0 overflow-y-auto bg-slate-50 flex-1">
+              <table className="w-full text-left text-sm bg-white">
+                <thead className="sticky top-0 bg-white shadow-sm">
+                  <tr className="border-b border-slate-200 text-slate-500">
+                    <th className="p-4 font-bold uppercase tracking-wider">Date</th>
+                    <th className="p-4 font-bold uppercase tracking-wider">Amount</th>
+                    <th className="p-4 font-bold uppercase tracking-wider">Sender</th>
+                    <th className="p-4 font-bold uppercase tracking-wider text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {monthlyTxs.map((tx, idx) => (
+                    <tr key={idx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
+                      <td className="p-4 text-slate-500 whitespace-nowrap">{new Date(tx.created_at).toLocaleString()}</td>
+                      <td className="p-4 font-black text-slate-900">₹{tx.amount}</td>
+                      <td className="p-4 text-slate-600 font-medium">{tx.sender_name}</td>
+                      <td className="p-4 text-right">
+                        {tx.status === 'matched' ? (
+                          <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full font-bold text-xs">Matched</span>
+                        ) : (
+                          <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-bold text-xs">{tx.status}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {monthlyTxs.length === 0 && (
+                    <tr><td colSpan={4} className="p-8 text-center text-slate-400">No transactions this month.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            
+            <div className="p-4 border-t border-slate-100 bg-white flex justify-between items-center text-sm">
+              <span className="text-slate-500 font-medium">Total Transactions: {monthlyTxs.length}</span>
+              <span className="text-slate-900 font-black">Total Vol: ₹{monthlyTxs.reduce((sum, tx) => sum + parseFloat(tx.amount || 0), 0).toLocaleString('en-IN')}</span>
             </div>
           </div>
         </div>
