@@ -23,31 +23,13 @@ export async function POST(req: Request) {
     console.log(`🏦 New Bank Alert: ₹${amount} from ${senderName}`);
 
     // 3. THE MATCHING ENGINE
-    const { data: pendingInvoices } = await supabase
-      .from('invoices')
-      .select('id')
-      .eq('status', 'pending')
-      .eq('amount', amount);
+    // We intentionally leave all transactions as 'unmatched' initially.
+    // At a busy petrol pump, we want the cashier to manually verify the sender's name 
+    // on the screen before it turns green, preventing collisions for common amounts (like ₹500).
+    const transactionStatus = 'unmatched';
+    const matchedId = null;
 
-    let transactionStatus = 'unmatched';
-    let matchedId = null;
-
-    // RULE 1: Exact Match
-    if (pendingInvoices && pendingInvoices.length === 1) {
-      matchedId = pendingInvoices[0].id;
-      transactionStatus = 'matched';
-
-      await supabase
-        .from('invoices')
-        .update({ status: 'paid' })
-        .eq('id', matchedId);
-      
-      console.log(`✅ Auto-Matched to Invoice ${matchedId}`);
-    } 
-    // RULE 2: Collision
-    else if (pendingInvoices && pendingInvoices.length > 1) {
-      console.log(`⚠️ Collision detected! Left unmatched for cashier to verify.`);
-    }
+    console.log(`⚠️ New payment logged as unmatched for manual cashier verification.`);
 
     // 4. LOG TO LEDGER
     await supabase.from('bank_transactions').insert({
@@ -58,7 +40,7 @@ export async function POST(req: Request) {
       matched_invoice_id: matchedId
     });
 
-    return NextResponse.json({ success: true, matched: transactionStatus === 'matched' });
+    return NextResponse.json({ success: true, matched: false });
 
   } catch (error) {
     console.error("Webhook Error:", error);
