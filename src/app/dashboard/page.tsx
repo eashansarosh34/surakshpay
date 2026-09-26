@@ -107,6 +107,22 @@ export default function DashboardPage() {
           }
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'bank_transactions' },
+        (payload) => {
+          // Update the ledger row instantly across all devices
+          setLedger((prev) => prev.map(tx => tx.id === payload.new.id ? payload.new : tx));
+          
+          // If another terminal claimed this payment, remove it from our screen instantly
+          setSuggestedMatch((current: any) => {
+            if (current && current.id === payload.new.id && payload.new.status === 'matched') {
+              return null;
+            }
+            return current;
+          });
+        }
+      )
       .subscribe();
 
     return () => {
@@ -129,6 +145,12 @@ export default function DashboardPage() {
 
   const handleManualMatch = async (tx: any) => {
     if (!activeInvoiceId) return;
+
+    // Safety Check: If cashier clicks an item with a different amount
+    if (tx.amount !== generatedAmount) {
+      const confirmMatch = window.confirm(`⚠️ WARNING: The bill is for ₹${generatedAmount}, but this payment is for ₹${tx.amount}.\n\nAre you sure you want to match these?`);
+      if (!confirmMatch) return;
+    }
 
     // 1. Mark invoice as paid
     await supabase.from('invoices').update({ status: 'paid' }).eq('id', activeInvoiceId);
