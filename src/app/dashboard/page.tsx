@@ -102,7 +102,7 @@ export default function DashboardPage() {
         { event: 'INSERT', schema: 'public', table: 'bank_transactions' },
         (payload) => {
           setLedger((prev) => [payload.new, ...prev].slice(0, 6));
-          if (payload.new.amount === generatedAmount && payload.new.status === 'unmatched') {
+          if (payload.new.status === 'unmatched') {
             setSuggestedMatch(payload.new);
           }
         }
@@ -230,13 +230,21 @@ export default function DashboardPage() {
                   {suggestedMatch && !isPaid && (
                     <div className="w-full mt-2 mb-6 bg-green-50 border-2 border-green-500 rounded-2xl p-4 text-center">
                       <p className="text-sm font-bold text-green-700 uppercase tracking-widest mb-1">Incoming Payment Detected</p>
-                      <p className="text-2xl font-black text-slate-900 mb-3">{suggestedMatch.sender_name}</p>
-                      <button 
-                        onClick={() => handleManualMatch(suggestedMatch)}
-                        className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-wider rounded-xl shadow-lg shadow-green-500/30 transition-all active:scale-95"
-                      >
-                        Confirm Name & Accept
-                      </button>
+                      <p className="text-2xl font-black text-slate-900 mb-3">₹{suggestedMatch.amount} from {suggestedMatch.sender_name}</p>
+                      <div className="flex gap-3">
+                        <button 
+                          onClick={() => setSuggestedMatch(null)}
+                          className="flex-1 py-3 bg-white hover:bg-slate-100 text-slate-700 border-2 border-slate-200 font-bold uppercase tracking-wider rounded-xl transition-all active:scale-95"
+                        >
+                          Waitlist
+                        </button>
+                        <button 
+                          onClick={() => handleManualMatch(suggestedMatch)}
+                          className="flex-[2] py-3 bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-wider rounded-xl shadow-lg shadow-green-500/30 transition-all active:scale-95"
+                        >
+                          Confirm & Accept
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -268,6 +276,7 @@ export default function DashboardPage() {
                   <th className="pb-3 font-bold uppercase tracking-wider">Sender</th>
                   <th className="pb-3 font-bold uppercase tracking-wider">Status</th>
                   <th className="pb-3 font-bold uppercase tracking-wider">Time</th>
+                  <th className="pb-3 font-bold uppercase tracking-wider text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -279,10 +288,20 @@ export default function DashboardPage() {
                       {tx.status === 'matched' ? (
                         <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full font-bold text-xs">Matched</span>
                       ) : (
-                        <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-bold text-xs">Unmatched</span>
+                        <span className="bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-bold text-xs">Waitlist</span>
                       )}
                     </td>
                     <td className="py-4 text-slate-400">{new Date(tx.created_at).toLocaleTimeString()}</td>
+                    <td className="py-4 text-right">
+                      {tx.status === 'unmatched' && activeInvoiceId && !isPaid && (
+                        <button 
+                          onClick={() => handleManualMatch(tx)} 
+                          className="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-3 py-2 rounded-lg transition-all"
+                        >
+                          Match to Bill
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
                 {ledger.length === 0 && (
