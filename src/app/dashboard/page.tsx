@@ -129,12 +129,6 @@ export default function DashboardPage() {
 
   const handleManualMatch = async (tx: any) => {
     if (!activeInvoiceId) return;
-    
-    // Safety Check: If cashier clicks a waitlist item with a different amount
-    if (tx.amount !== generatedAmount) {
-      const confirmMatch = window.confirm(`⚠️ WARNING: The bill is for ₹${generatedAmount}, but this payment is for ₹${tx.amount}.\n\nAre you sure you want to match these?`);
-      if (!confirmMatch) return;
-    }
 
     // 1. Mark invoice as paid
     await supabase.from('invoices').update({ status: 'paid' }).eq('id', activeInvoiceId);
