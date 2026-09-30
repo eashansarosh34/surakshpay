@@ -23,6 +23,8 @@ export default function DashboardPage() {
   const merchantAccount = "41814643181";
   const merchantIFSC = "SBIN0020514";
   const merchantBank = "State Bank of India (SBI)";
+  const standardUpiId = "eashanmoon@ybl";
+  const merchantName = "SurakshPay";
 
   const playVoiceAlert = (amount: number) => {
     try {
@@ -71,9 +73,17 @@ export default function DashboardPage() {
       setIsPaid(false);
       setSuggestedMatch(null);
 
-      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://surakshpay.in';
-      const invoiceUrl = `${origin}/invoice/${data.id}?acc=${merchantAccount}&ifsc=${merchantIFSC}&bank=${encodeURIComponent(merchantBank)}`;
-      setQrUrl(`https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encodeURIComponent(invoiceUrl)}`);
+      // SMART ROUTER LOGIC
+      if (amountVal <= 2000) {
+        // Standard Route (0% MDR anyway)
+        const upiString = `upi://pay?pa=${standardUpiId}&pn=${encodeURIComponent(merchantName)}&am=${amountVal}&cu=INR`;
+        setQrUrl(`https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encodeURIComponent(upiString)}`);
+      } else {
+        // SurakshPay Invoice Route (Manual Bank Transfer)
+        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://surakshpay.in';
+        const invoiceUrl = `${origin}/invoice/${data.id}?acc=${merchantAccount}&ifsc=${merchantIFSC}&bank=${encodeURIComponent(merchantBank)}`;
+        setQrUrl(`https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encodeURIComponent(invoiceUrl)}`);
+      }
     } catch (err) {
       console.error("Database Error:", err);
     }
@@ -292,11 +302,24 @@ export default function DashboardPage() {
                     <p className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter">
                       ₹{generatedAmount?.toLocaleString('en-IN')}
                     </p>
+                    <div className="mt-3 inline-block bg-slate-100 text-slate-500 font-bold text-xs uppercase tracking-widest px-3 py-1.5 rounded-full border border-slate-200">
+                      {generatedAmount && generatedAmount <= 2000 ? '⚡ Standard Route' : '🛡️ Zero-MDR Route'}
+                    </div>
                   </div>
 
                   <div className="flex justify-center mb-6 flex-col items-center">
                     <div className="bg-white p-3 rounded-2xl border-4 border-slate-100 shadow-md transition-transform hover:scale-105 cursor-pointer">
-                      {qrUrl ? <a href={`/invoice/${activeInvoiceId}?acc=${merchantAccount}&ifsc=${merchantIFSC}`} target="_blank" rel="noreferrer"><img src={qrUrl} alt="Smart Invoice QR" className="w-48 h-48 md:w-56 md:h-56 object-contain" /></a> : <div className="w-48 h-48 bg-slate-100 animate-pulse rounded-xl"></div>}
+                      {qrUrl ? (
+                        generatedAmount && generatedAmount > 2000 ? (
+                          <a href={`/invoice/${activeInvoiceId}?acc=${merchantAccount}&ifsc=${merchantIFSC}&bank=${encodeURIComponent(merchantBank)}`} target="_blank" rel="noreferrer">
+                            <img src={qrUrl} alt="Smart Route QR" className="w-48 h-48 md:w-56 md:h-56 object-contain" />
+                          </a>
+                        ) : (
+                          <img src={qrUrl} alt="Smart Route QR" className="w-48 h-48 md:w-56 md:h-56 object-contain" />
+                        )
+                      ) : (
+                        <div className="w-48 h-48 bg-slate-100 animate-pulse rounded-xl"></div>
+                      )}
                     </div>
                   </div>
 
