@@ -84,9 +84,24 @@ export default function DashboardPage() {
         const invoiceUrl = `${origin}/invoice/${data.id}?acc=${merchantAccount}&ifsc=${merchantIFSC}&bank=${encodeURIComponent(merchantBank)}`;
         setQrUrl(`https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encodeURIComponent(invoiceUrl)}`);
       }
+
+      // MOBILE AUTO-SCROLL
+      setTimeout(() => {
+        document.getElementById('terminal-view')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+
     } catch (err) {
       console.error("Database Error:", err);
     }
+  };
+
+  const handleReset = () => {
+    setAmountInput('');
+    setGeneratedAmount(null);
+    setActiveInvoiceId(null);
+    setQrUrl('');
+    setIsPaid(false);
+    setSuggestedMatch(null);
   };
 
   // 2. REAL-TIME DATABASE LISTENER
@@ -277,7 +292,7 @@ export default function DashboardPage() {
           </div>
 
           {/* RIGHT COLUMN: THE TERMINAL */}
-          <div className="lg:col-span-8 bg-slate-200 rounded-2xl border-4 border-slate-300 flex items-center justify-center p-6 min-h-[450px]">
+          <div id="terminal-view" className="lg:col-span-8 bg-slate-200 rounded-2xl border-4 border-slate-300 flex items-center justify-center p-6 min-h-[450px]">
             {!activeInvoiceId ? (
               <div className="text-center text-slate-400">
                 <Scan size={64} className="mx-auto mb-4 opacity-20" />
@@ -290,6 +305,12 @@ export default function DashboardPage() {
                 </div>
                 <h3 className="text-5xl font-black text-slate-900 mb-4">₹{generatedAmount?.toLocaleString('en-IN')}</h3>
                 <p className="text-green-600 font-black uppercase tracking-[0.2em] text-lg">Bank Transfer Verified</p>
+                <button 
+                  onClick={handleReset}
+                  className="mt-8 px-8 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold uppercase tracking-wider text-sm rounded-xl transition-colors"
+                >
+                  New Transaction
+                </button>
               </div>
             ) : (
               <div className="w-full max-w-3xl flex flex-col items-center">
@@ -321,6 +342,13 @@ export default function DashboardPage() {
                         <div className="w-48 h-48 bg-slate-100 animate-pulse rounded-xl"></div>
                       )}
                     </div>
+                    
+                    <button 
+                      onClick={handleReset}
+                      className="mt-6 px-6 py-2 text-red-500 font-bold uppercase tracking-wider text-sm hover:bg-red-50 rounded-full transition-colors border border-transparent hover:border-red-200"
+                    >
+                      Cancel / New Bill
+                    </button>
                   </div>
 
                   {suggestedMatch && !isPaid && (
