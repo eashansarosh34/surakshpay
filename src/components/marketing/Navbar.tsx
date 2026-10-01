@@ -17,11 +17,8 @@ export function Navbar() {
           <Link href="/contact" className="hover:text-blue-600 transition-colors">Contact</Link>
         </div>
         <div className="flex items-center gap-4">
-          <Link href="/login" className="text-sm font-semibold text-slate-600 hover:text-blue-600">
+          <Link href="/login" className="text-sm font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
             Sign In
-          </Link>
-          <Link href="/signup" className="text-sm font-semibold bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-            Get Started
           </Link>
         </div>
       </div>

@@ -16,10 +16,7 @@ export default function Home() {
             Generate professional invoices, track payments, and streamline high-value collections for your business.
           </p>
           <div className="flex items-center justify-center gap-4">
-            <Link href="/pricing" className="bg-blue-600 text-white px-8 py-3.5 rounded-lg font-bold text-lg hover:bg-blue-700 transition-shadow shadow-lg shadow-blue-600/20">
-              Get Started
-            </Link>
-            <Link href="/contact" className="bg-white text-slate-700 border border-slate-200 px-8 py-3.5 rounded-lg font-bold text-lg hover:bg-slate-50 transition-colors">
+            <Link href="/contact" className="bg-blue-600 text-white px-8 py-3.5 rounded-lg font-bold text-lg hover:bg-blue-700 transition-shadow shadow-lg shadow-blue-600/20">
               Request a Demo
             </Link>
           </div>
