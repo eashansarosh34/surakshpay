@@ -505,14 +505,14 @@ export default function DashboardPage() {
                       ₹{generatedAmount?.toLocaleString('en-IN')}
                     </p>
                     <div className="mt-3 inline-block bg-slate-100 text-slate-500 font-bold text-xs uppercase tracking-widest px-3 py-1.5 rounded-full border border-slate-200">
-                      {generatedAmount && generatedAmount <= 2000 ? '⚡ Standard Route' : '🛡️ Zero-MDR Route'}
+                      {qrUrl && qrUrl.includes('%2Finvoice%2F') ? '🛡️ Zero-MDR Route' : '⚡ Standard Route'}
                     </div>
                   </div>
 
                   <div className="flex justify-center mb-6 flex-col items-center">
                     <div className="bg-white p-3 rounded-2xl border-4 border-slate-100 shadow-md transition-transform hover:scale-105 cursor-pointer">
                       {qrUrl ? (
-                        generatedAmount && generatedAmount > 2000 ? (
+                        qrUrl.includes('%2Finvoice%2F') ? (
                           <a href={`/invoice/${activeInvoiceId}?acc=${merchantAccount}&ifsc=${merchantIFSC}&bank=${encodeURIComponent(merchantBank)}`} target="_blank" rel="noreferrer">
                             <img src={qrUrl} alt="Smart Route QR" className="w-48 h-48 md:w-56 md:h-56 object-contain" />
                           </a>
