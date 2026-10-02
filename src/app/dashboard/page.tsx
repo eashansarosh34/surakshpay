@@ -19,6 +19,14 @@ export default function DashboardPage() {
   const [showMonthlyReport, setShowMonthlyReport] = useState(false);
   const [monthlyTxs, setMonthlyTxs] = useState<any[]>([]);
 
+  // ADVANCE + FINAL MODE
+  const [advanceMode, setAdvanceMode] = useState(false);
+  const [estimatedTotal, setEstimatedTotal] = useState<number | null>(null);
+  const [advanceCollected, setAdvanceCollected] = useState(false);
+  const [showFinalInput, setShowFinalInput] = useState(false);
+  const [finalAmountInput, setFinalAmountInput] = useState('');
+  const ADVANCE_AMOUNT = 2000;
+
   // MERCHANT DETAILS
   const merchantAccount = "41814643181";
   const merchantIFSC = "SBIN0020514";
@@ -102,6 +110,95 @@ export default function DashboardPage() {
     setQrUrl('');
     setIsPaid(false);
     setSuggestedMatch(null);
+    setAdvanceMode(false);
+    setEstimatedTotal(null);
+    setAdvanceCollected(false);
+    setShowFinalInput(false);
+    setFinalAmountInput('');
+  };
+
+  // ADVANCE MODE: Detect when advance payment is confirmed
+  useEffect(() => {
+    if (isPaid && advanceMode && !advanceCollected) {
+      setAdvanceCollected(true);
+      setShowFinalInput(true);
+      if (estimatedTotal) {
+        setFinalAmountInput(String(estimatedTotal - ADVANCE_AMOUNT));
+      }
+    }
+  }, [isPaid, advanceMode, advanceCollected, estimatedTotal]);
+
+  // ADVANCE: Generate ₹2,000 advance invoice
+  const handleAdvanceGenerate = async () => {
+    const totalVal = parseFloat(amountInput);
+    if (isNaN(totalVal) || totalVal <= ADVANCE_AMOUNT) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('invoices')
+        .insert([{ amount: ADVANCE_AMOUNT, status: 'pending' }])
+        .select()
+        .single();
+
+      if (error) {
+        alert("Supabase says: " + error.message);
+        return;
+      }
+
+      setEstimatedTotal(totalVal);
+      setAdvanceMode(true);
+      setAdvanceCollected(false);
+      setShowFinalInput(false);
+      setGeneratedAmount(ADVANCE_AMOUNT);
+      setActiveInvoiceId(data.id);
+      setIsPaid(false);
+      setSuggestedMatch(null);
+
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://surakshpay.in';
+      const invoiceUrl = `${origin}/invoice/${data.id}?acc=${merchantAccount}&ifsc=${merchantIFSC}&bank=${encodeURIComponent(merchantBank)}`;
+      setQrUrl(`https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encodeURIComponent(invoiceUrl)}`);
+
+      setTimeout(() => {
+        document.getElementById('terminal-view')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    } catch (err) {
+      console.error("Database Error:", err);
+    }
+  };
+
+  // FINAL: Generate remaining balance invoice
+  const handleFinalGenerate = async () => {
+    const finalVal = parseFloat(finalAmountInput);
+    if (isNaN(finalVal) || finalVal <= 0) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('invoices')
+        .insert([{ amount: finalVal, status: 'pending' }])
+        .select()
+        .single();
+
+      if (error) {
+        alert("Supabase says: " + error.message);
+        return;
+      }
+
+      setShowFinalInput(false);
+      setGeneratedAmount(finalVal);
+      setActiveInvoiceId(data.id);
+      setIsPaid(false);
+      setSuggestedMatch(null);
+
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://surakshpay.in';
+      const invoiceUrl = `${origin}/invoice/${data.id}?acc=${merchantAccount}&ifsc=${merchantIFSC}&bank=${encodeURIComponent(merchantBank)}`;
+      setQrUrl(`https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encodeURIComponent(invoiceUrl)}`);
+
+      setTimeout(() => {
+        document.getElementById('terminal-view')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    } catch (err) {
+      console.error("Database Error:", err);
+    }
   };
 
   // 2. REAL-TIME DATABASE LISTENER
@@ -269,25 +366,75 @@ export default function DashboardPage() {
                 </div>
               </div>
               
-              <form onSubmit={handleGenerate} className="flex-1 flex flex-col">
-                <div className="mb-8">
-                  <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-3">Total Amount (₹)</label>
-                  <div className="relative">
-                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-black text-2xl">₹</span>
-                    <input
-                      type="number"
-                      value={amountInput}
-                      onChange={(e) => setAmountInput(e.target.value)}
-                      placeholder="0"
-                      className="w-full pl-12 pr-4 py-5 text-4xl font-black text-slate-900 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-blue-500 outline-none"
-                    />
+              {!advanceCollected ? (
+                <form onSubmit={advanceMode ? (e) => { e.preventDefault(); handleAdvanceGenerate(); } : handleGenerate} className="flex-1 flex flex-col">
+                  <div className="mb-6 flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <div>
+                      <p className="font-bold text-slate-700 text-sm">New Customer / High Ticket</p>
+                      <p className="text-xs text-slate-500">Collect ₹2,000 advance first</p>
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={() => setAdvanceMode(!advanceMode)}
+                      className={`w-12 h-6 rounded-full relative transition-colors ${advanceMode ? 'bg-blue-600' : 'bg-slate-300'}`}
+                    >
+                      <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${advanceMode ? 'translate-x-6' : 'translate-x-0'}`} />
+                    </button>
                   </div>
-                </div>
+                  
+                  <div className="mb-8">
+                    <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-3">Total Amount (₹)</label>
+                    <div className="relative">
+                      <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-black text-2xl">₹</span>
+                      <input
+                        type="number"
+                        value={amountInput}
+                        onChange={(e) => setAmountInput(e.target.value)}
+                        placeholder="0"
+                        className="w-full pl-12 pr-4 py-5 text-4xl font-black text-slate-900 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-blue-500 outline-none"
+                      />
+                    </div>
+                    {advanceMode && amountInput && parseFloat(amountInput) > ADVANCE_AMOUNT && (
+                      <p className="mt-3 text-sm font-medium text-blue-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        Will generate <strong>₹{ADVANCE_AMOUNT}</strong> advance QR first.
+                      </p>
+                    )}
+                  </div>
 
-                <button type="submit" className="w-full mt-auto py-5 bg-blue-600 hover:bg-blue-700 text-white font-black text-lg rounded-2xl shadow-lg shadow-blue-500/30 transition-all active:scale-95 flex items-center justify-center gap-2">
-                  <Scan size={24} /> Generate Terminal
-                </button>
-              </form>
+                  <button type="submit" className="w-full mt-auto py-5 bg-blue-600 hover:bg-blue-700 text-white font-black text-lg rounded-2xl shadow-lg shadow-blue-500/30 transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <Scan size={24} /> {advanceMode ? 'Generate Advance QR' : 'Generate Terminal'}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={(e) => { e.preventDefault(); handleFinalGenerate(); }} className="flex-1 flex flex-col">
+                  <div className="mb-6 bg-green-50 p-4 rounded-xl border border-green-200">
+                    <p className="font-bold text-green-700 flex items-center gap-2"><Check size={18} /> Advance Collected (₹{ADVANCE_AMOUNT})</p>
+                    <p className="text-sm text-green-600 mt-1">Beneficiary is now warm. Generate final bill.</p>
+                  </div>
+
+                  <div className="mb-8">
+                    <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-3">Final Balance (₹)</label>
+                    <div className="relative">
+                      <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-black text-2xl">₹</span>
+                      <input
+                        type="number"
+                        value={finalAmountInput}
+                        onChange={(e) => setFinalAmountInput(e.target.value)}
+                        placeholder="0"
+                        className="w-full pl-12 pr-4 py-5 text-4xl font-black text-slate-900 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-green-500 outline-none"
+                      />
+                    </div>
+                    <p className="mt-3 text-sm text-slate-500">Estimated total was ₹{estimatedTotal?.toLocaleString('en-IN')}</p>
+                  </div>
+
+                  <button type="submit" className="w-full mt-auto py-5 bg-green-600 hover:bg-green-700 text-white font-black text-lg rounded-2xl shadow-lg shadow-green-500/30 transition-all active:scale-95 flex items-center justify-center gap-2">
+                    <Scan size={24} /> Generate Final QR
+                  </button>
+                  <button type="button" onClick={handleReset} className="mt-4 py-3 text-slate-500 font-bold hover:text-slate-700">
+                    Cancel Flow
+                  </button>
+                </form>
+              )}
             </div>
           </div>
 
@@ -304,13 +451,19 @@ export default function DashboardPage() {
                   <Check size={56} className="text-white" />
                 </div>
                 <h3 className="text-5xl font-black text-slate-900 mb-4">₹{generatedAmount?.toLocaleString('en-IN')}</h3>
-                <p className="text-green-600 font-black uppercase tracking-[0.2em] text-lg">Bank Transfer Verified</p>
-                <button 
-                  onClick={handleReset}
-                  className="mt-8 px-8 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold uppercase tracking-wider text-sm rounded-xl transition-colors"
-                >
-                  New Transaction
-                </button>
+                <p className="text-green-600 font-black uppercase tracking-[0.2em] text-lg">
+                  {advanceMode && showFinalInput ? 'Advance Verified' : 'Bank Transfer Verified'}
+                </p>
+                {advanceMode && showFinalInput ? (
+                  <p className="mt-6 text-slate-500 font-medium">Please generate the final bill on the left.</p>
+                ) : (
+                  <button 
+                    onClick={handleReset}
+                    className="mt-8 px-8 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold uppercase tracking-wider text-sm rounded-xl transition-colors"
+                  >
+                    New Transaction
+                  </button>
+                )}
               </div>
             ) : (
               <div className="w-full max-w-3xl flex flex-col items-center">
