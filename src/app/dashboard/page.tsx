@@ -135,7 +135,19 @@ export default function DashboardPage() {
   const handleAdvanceGenerate = async () => {
     const totalVal = parseFloat(amountInput);
     const advVal = parseFloat(advanceAmountInput);
-    if (isNaN(totalVal) || isNaN(advVal) || advVal <= 0 || totalVal <= advVal) return;
+    
+    if (isNaN(totalVal) || totalVal <= 0) {
+      alert("Please enter a valid Total Amount.");
+      return;
+    }
+    if (isNaN(advVal) || advVal <= 0) {
+      alert("Please enter a valid Advance Amount.");
+      return;
+    }
+    if (advVal > totalVal) {
+      alert("Advance amount cannot be greater than the total bill.");
+      return;
+    }
 
     try {
       const { data, error } = await supabase
