@@ -25,7 +25,8 @@ export default function DashboardPage() {
   const [advanceCollected, setAdvanceCollected] = useState(false);
   const [showFinalInput, setShowFinalInput] = useState(false);
   const [finalAmountInput, setFinalAmountInput] = useState('');
-  const ADVANCE_AMOUNT = 2000;
+  const [advanceAmountInput, setAdvanceAmountInput] = useState('2000');
+  const [capturedAdvance, setCapturedAdvance] = useState<number | null>(null);
 
   // MERCHANT DETAILS
   const merchantAccount = "41814643181";
@@ -115,6 +116,8 @@ export default function DashboardPage() {
     setAdvanceCollected(false);
     setShowFinalInput(false);
     setFinalAmountInput('');
+    setAdvanceAmountInput('2000');
+    setCapturedAdvance(null);
   };
 
   // ADVANCE MODE: Detect when advance payment is confirmed
@@ -122,21 +125,22 @@ export default function DashboardPage() {
     if (isPaid && advanceMode && !advanceCollected) {
       setAdvanceCollected(true);
       setShowFinalInput(true);
-      if (estimatedTotal) {
-        setFinalAmountInput(String(estimatedTotal - ADVANCE_AMOUNT));
+      if (estimatedTotal && capturedAdvance) {
+        setFinalAmountInput(String(estimatedTotal - capturedAdvance));
       }
     }
-  }, [isPaid, advanceMode, advanceCollected, estimatedTotal]);
+  }, [isPaid, advanceMode, advanceCollected, estimatedTotal, capturedAdvance]);
 
-  // ADVANCE: Generate ₹2,000 advance invoice
+  // ADVANCE: Generate advance invoice
   const handleAdvanceGenerate = async () => {
     const totalVal = parseFloat(amountInput);
-    if (isNaN(totalVal) || totalVal <= ADVANCE_AMOUNT) return;
+    const advVal = parseFloat(advanceAmountInput);
+    if (isNaN(totalVal) || isNaN(advVal) || advVal <= 0 || totalVal <= advVal) return;
 
     try {
       const { data, error } = await supabase
         .from('invoices')
-        .insert([{ amount: ADVANCE_AMOUNT, status: 'pending' }])
+        .insert([{ amount: advVal, status: 'pending' }])
         .select()
         .single();
 
@@ -146,10 +150,11 @@ export default function DashboardPage() {
       }
 
       setEstimatedTotal(totalVal);
+      setCapturedAdvance(advVal);
       setAdvanceMode(true);
       setAdvanceCollected(false);
       setShowFinalInput(false);
-      setGeneratedAmount(ADVANCE_AMOUNT);
+      setGeneratedAmount(advVal);
       setActiveInvoiceId(data.id);
       setIsPaid(false);
       setSuggestedMatch(null);
@@ -371,7 +376,7 @@ export default function DashboardPage() {
                   <div className="mb-6 flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
                     <div>
                       <p className="font-bold text-slate-700 text-sm">New Customer / High Ticket</p>
-                      <p className="text-xs text-slate-500">Collect ₹2,000 advance first</p>
+                      <p className="text-xs text-slate-500">Collect advance first</p>
                     </div>
                     <button 
                       type="button" 
@@ -382,7 +387,7 @@ export default function DashboardPage() {
                     </button>
                   </div>
                   
-                  <div className="mb-8">
+                  <div className={advanceMode ? "mb-4" : "mb-8"}>
                     <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-3">Total Amount (₹)</label>
                     <div className="relative">
                       <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-black text-2xl">₹</span>
@@ -394,12 +399,23 @@ export default function DashboardPage() {
                         className="w-full pl-12 pr-4 py-5 text-4xl font-black text-slate-900 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-blue-500 outline-none"
                       />
                     </div>
-                    {advanceMode && amountInput && parseFloat(amountInput) > ADVANCE_AMOUNT && (
-                      <p className="mt-3 text-sm font-medium text-blue-600 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                        Will generate <strong>₹{ADVANCE_AMOUNT}</strong> advance QR first.
-                      </p>
-                    )}
                   </div>
+                  
+                  {advanceMode && (
+                    <div className="mb-6">
+                      <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-3">Advance Amount (₹)</label>
+                      <div className="relative">
+                        <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-black text-xl">₹</span>
+                        <input
+                          type="number"
+                          value={advanceAmountInput}
+                          onChange={(e) => setAdvanceAmountInput(e.target.value)}
+                          placeholder="0"
+                          className="w-full pl-12 pr-4 py-3 text-2xl font-black text-slate-900 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:border-blue-500 outline-none"
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   <button type="submit" className="w-full mt-auto py-5 bg-blue-600 hover:bg-blue-700 text-white font-black text-lg rounded-2xl shadow-lg shadow-blue-500/30 transition-all active:scale-95 flex items-center justify-center gap-2">
                     <Scan size={24} /> {advanceMode ? 'Generate Advance QR' : 'Generate Terminal'}
@@ -408,7 +424,7 @@ export default function DashboardPage() {
               ) : (
                 <form onSubmit={(e) => { e.preventDefault(); handleFinalGenerate(); }} className="flex-1 flex flex-col">
                   <div className="mb-6 bg-green-50 p-4 rounded-xl border border-green-200">
-                    <p className="font-bold text-green-700 flex items-center gap-2"><Check size={18} /> Advance Collected (₹{ADVANCE_AMOUNT})</p>
+                    <p className="font-bold text-green-700 flex items-center gap-2"><Check size={18} /> Advance Collected (₹{capturedAdvance})</p>
                     <p className="text-sm text-green-600 mt-1">Beneficiary is now warm. Generate final bill.</p>
                   </div>
 
