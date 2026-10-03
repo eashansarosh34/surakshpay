@@ -27,6 +27,7 @@ export default function DashboardPage() {
   const [finalAmountInput, setFinalAmountInput] = useState('');
   const [advanceAmountInput, setAdvanceAmountInput] = useState('2000');
   const [capturedAdvance, setCapturedAdvance] = useState<number | null>(null);
+  const [autoMatch, setAutoMatch] = useState(false);
 
   // MERCHANT DETAILS
   const merchantAccount = "41814643181";
@@ -244,7 +245,18 @@ export default function DashboardPage() {
         (payload) => {
           setLedger((prev) => [payload.new, ...prev].slice(0, 6));
           if (payload.new.status === 'unmatched') {
-            setSuggestedMatch(payload.new);
+            if (autoMatch && Number(payload.new.amount) === Number(generatedAmount)) {
+              supabase.from('invoices').update({ status: 'paid' }).eq('id', activeInvoiceId).then(() => {
+                supabase.from('bank_transactions').update({ status: 'matched', matched_invoice_id: activeInvoiceId }).eq('id', payload.new.id).then(() => {
+                  setSuggestedMatch(null);
+                  setGeneratedAmount(payload.new.amount);
+                  setIsPaid(true);
+                  playVoiceAlert(payload.new.amount);
+                });
+              });
+            } else {
+              setSuggestedMatch(payload.new);
+            }
           }
         }
       )
@@ -270,7 +282,7 @@ export default function DashboardPage() {
       supabase.removeChannel(invoiceChannel);
       supabase.removeChannel(bankChannel);
     };
-  }, [activeInvoiceId, generatedAmount]);
+  }, [activeInvoiceId, generatedAmount, autoMatch]);
 
   // Collision Handling
   const openManualModal = async () => {
@@ -373,13 +385,26 @@ export default function DashboardPage() {
           {/* LEFT COLUMN: CASHIER INPUT */}
           <div className="lg:col-span-4 space-y-6">
             <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-slate-200 flex flex-col min-h-[450px]">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="bg-blue-100 p-3 rounded-xl text-blue-700">
-                  <MonitorSmartphone size={28} />
+              <div className="flex items-center justify-between gap-3 mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="bg-blue-100 p-3 rounded-xl text-blue-700">
+                    <MonitorSmartphone size={28} />
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-xl text-slate-800">New Payment</h2>
+                    <p className="text-sm text-slate-500">Enter bill amount</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="font-bold text-xl text-slate-800">New Payment</h2>
-                  <p className="text-sm text-slate-500">Enter bill amount</p>
+                
+                <div className="flex flex-col items-end">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Auto-Match</span>
+                  <button 
+                    type="button" 
+                    onClick={() => setAutoMatch(!autoMatch)}
+                    className={`w-10 h-5 rounded-full relative transition-colors shadow-inner ${autoMatch ? 'bg-green-500' : 'bg-slate-300'}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 bg-white w-4 h-4 rounded-full shadow transition-transform ${autoMatch ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
                 </div>
               </div>
               
