@@ -4,14 +4,33 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export function ConsentModal() {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const [canAccept, setCanAccept] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // FORCING MODAL OPEN FOR DEBUGGING
-    console.log("Consent Modal Mounted!");
-    setIsOpen(true);
+    const checkConsent = async () => {
+      // 1. Fast check local storage first
+      if (localStorage.getItem('surakshpay_consent_accepted') === 'true') {
+        return;
+      }
+
+      // 2. Check Supabase Auth Metadata (if connected)
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && user.user_metadata?.terms_accepted) {
+          localStorage.setItem('surakshpay_consent_accepted', 'true');
+          return;
+        }
+      } catch (e) {
+        // Ignore auth errors if using mock login
+      }
+
+      // If not accepted yet, show the modal
+      setIsOpen(true);
+    };
+    
+    checkConsent();
   }, []);
 
   const handleScroll = () => {
@@ -25,19 +44,23 @@ export function ConsentModal() {
   };
 
   const handleAccept = async () => {
-    // Optimistic UI update for instant feedback
+    // Hide UI instantly and save to browser cache
     setIsOpen(false);
     localStorage.setItem('surakshpay_consent_accepted', 'true');
 
-    // Permanently save to Supabase Database
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.auth.updateUser({
-        data: { 
-          terms_accepted: true, 
-          terms_accepted_at: new Date().toISOString() 
-        }
-      });
+    // Permanently save to Supabase Database (if connected)
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.auth.updateUser({
+          data: { 
+            terms_accepted: true, 
+            terms_accepted_at: new Date().toISOString() 
+          }
+        });
+      }
+    } catch (e) {
+      console.error("Auth update skipped");
     }
   };
 
