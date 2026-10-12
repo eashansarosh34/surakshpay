@@ -13,9 +13,9 @@ export default function InvoicePage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    setAcc(urlParams.get('acc') || '41814643181');
-    setIfsc(urlParams.get('ifsc') || 'SBIN0020514');
-    setBank(urlParams.get('bank') || 'State Bank of India (SBI)');
+    setAcc(urlParams.get('acc') || '50100380097061');
+    setIfsc(urlParams.get('ifsc') || 'HDFC0000053');
+    setBank(urlParams.get('bank') || 'HDFC Bank');
     
     // In a real app we'd fetch the exact amount from Supabase using the invoice ID
     // For this UI demo, we can just say "Scan complete" or fetch it

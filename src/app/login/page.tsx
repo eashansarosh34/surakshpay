@@ -22,7 +22,7 @@ export default function Login() {
         window.location.href = '/admin';
       } 
       // Hardcoded merchant account
-      else if (email === 'eashanmoon77@gmail.com' && password === '123456') {
+      else if (email === 'rangupavankumar123@gmail.com' && password === '123456') {
         setMockRole('MERCHANT');
         window.location.href = '/dashboard';
       } 

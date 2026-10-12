@@ -31,11 +31,11 @@ export default function DashboardPage() {
   const [paiseFingerprint, setPaiseFingerprint] = useState(true); // TRICK 2: Stealth Collision-Proof Paise Offset
 
   // MERCHANT DETAILS
-  const merchantAccount = "41814643181";
-  const merchantIFSC = "SBIN0020514";
-  const merchantBank = "State Bank of India (SBI)";
-  const standardUpiId = "eashanmoon@ybl";
-  const merchantName = "SurakshPay";
+  const merchantAccount = "50100380097061";
+  const merchantIFSC = "HDFC0000053";
+  const merchantBank = "HDFC Bank";
+  const standardUpiId = "8919943151@ybl";
+  const merchantName = "Rangu Pavan Kumar";
 
   const playVoiceAlert = (amount: number) => {
     try {
