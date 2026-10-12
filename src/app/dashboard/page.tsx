@@ -28,6 +28,7 @@ export default function DashboardPage() {
   const [advanceAmountInput, setAdvanceAmountInput] = useState('2000');
   const [capturedAdvance, setCapturedAdvance] = useState<number | null>(null);
   const [autoMatch, setAutoMatch] = useState(false);
+  const [paiseFingerprint, setPaiseFingerprint] = useState(true); // TRICK 2: Stealth Collision-Proof Paise Offset
 
   // MERCHANT DETAILS
   const merchantAccount = "41814643181";
@@ -66,10 +67,14 @@ export default function DashboardPage() {
     const amountVal = parseFloat(amountInput);
     if (isNaN(amountVal) || amountVal <= 0) return;
 
+    // TRICK 2: PAISE FINGERPRINTING (COLLISION-PROOF OFFSET)
+    const randomPaise = (Math.floor(Math.random() * 89) + 11) / 100; // e.g. 0.11 to 0.99
+    const targetAmount = paiseFingerprint ? Number((amountVal + randomPaise).toFixed(2)) : amountVal;
+
     try {
       const { data, error } = await supabase
         .from('invoices')
-        .insert([{ amount: amountVal, status: 'pending' }])
+        .insert([{ amount: targetAmount, status: 'pending' }])
         .select()
         .single();
 
@@ -78,7 +83,7 @@ export default function DashboardPage() {
           return;
       }
 
-      setGeneratedAmount(amountVal);
+      setGeneratedAmount(targetAmount);
       setActiveInvoiceId(data.id);
       setIsPaid(false);
       setSuggestedMatch(null);
@@ -86,7 +91,7 @@ export default function DashboardPage() {
       // SMART ROUTER LOGIC
       if (amountVal <= 2000) {
         // Standard Route (0% MDR anyway)
-        const upiString = `upi://pay?pa=${standardUpiId}&pn=${encodeURIComponent(merchantName)}&am=${amountVal}&cu=INR`;
+        const upiString = `upi://pay?pa=${standardUpiId}&pn=${encodeURIComponent(merchantName)}&am=${targetAmount.toFixed(2)}&cu=INR`;
         setQrUrl(`https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=10&data=${encodeURIComponent(upiString)}`);
       } else {
         // SurakshPay Invoice Route (Manual Bank Transfer)
@@ -245,7 +250,7 @@ export default function DashboardPage() {
         (payload) => {
           setLedger((prev) => [payload.new, ...prev].slice(0, 6));
           if (payload.new.status === 'unmatched') {
-            if (autoMatch && Number(payload.new.amount) === Number(generatedAmount)) {
+            if (autoMatch && Math.abs(Number(payload.new.amount) - Number(generatedAmount)) < 0.01) {
               supabase.from('invoices').update({ status: 'paid' }).eq('id', activeInvoiceId).then(() => {
                 supabase.from('bank_transactions').update({ status: 'matched', matched_invoice_id: activeInvoiceId }).eq('id', payload.new.id).then(() => {
                   setSuggestedMatch(null);
@@ -423,6 +428,24 @@ export default function DashboardPage() {
                       <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${advanceMode ? 'translate-x-6' : 'translate-x-0'}`} />
                     </button>
                   </div>
+
+                  {/* TRICK 2: PAISE FINGERPRINT TOGGLE */}
+                  <div className="mb-6 flex items-center justify-between bg-emerald-50/70 p-3 rounded-xl border border-emerald-200">
+                    <div>
+                      <p className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                        <span>⚡ Paise Fingerprint</span>
+                        <span className="text-[10px] bg-emerald-200 text-emerald-800 px-1.5 py-0.5 rounded font-black tracking-wide">COLLISION PROOF</span>
+                      </p>
+                      <p className="text-xs text-slate-500">Adds .XX paise so bills never collide</p>
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={() => setPaiseFingerprint(!paiseFingerprint)}
+                      className={`w-12 h-6 rounded-full relative transition-colors ${paiseFingerprint ? 'bg-emerald-600' : 'bg-slate-300'}`}
+                    >
+                      <span className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${paiseFingerprint ? 'translate-x-6' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
                   
                   <div className={advanceMode ? "mb-4" : "mb-8"}>
                     <label className="block text-sm font-bold text-slate-700 uppercase tracking-wide mb-3">Total Amount (₹)</label>
@@ -503,7 +526,9 @@ export default function DashboardPage() {
                 <div className="w-28 h-28 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-green-500/40">
                   <Check size={56} className="text-white" />
                 </div>
-                <h3 className="text-5xl font-black text-slate-900 mb-4">₹{generatedAmount?.toLocaleString('en-IN')}</h3>
+                <h3 className="text-5xl font-black text-slate-900 mb-4">
+                  ₹{generatedAmount != null ? generatedAmount.toLocaleString('en-IN', { minimumFractionDigits: generatedAmount % 1 !== 0 ? 2 : 0, maximumFractionDigits: 2 }) : '0'}
+                </h3>
                 <p className="text-green-600 font-black uppercase tracking-[0.2em] text-lg">
                   {advanceMode && showFinalInput ? 'Advance Verified' : 'Bank Transfer Verified'}
                 </p>
@@ -527,7 +552,7 @@ export default function DashboardPage() {
 
                   <div className="text-center mb-6 mt-4">
                     <p className="text-5xl md:text-6xl font-black text-slate-900 tracking-tighter">
-                      ₹{generatedAmount?.toLocaleString('en-IN')}
+                      ₹{generatedAmount != null ? generatedAmount.toLocaleString('en-IN', { minimumFractionDigits: generatedAmount % 1 !== 0 ? 2 : 0, maximumFractionDigits: 2 }) : '0'}
                     </p>
                     <div className="mt-3 inline-block bg-slate-100 text-slate-500 font-bold text-xs uppercase tracking-widest px-3 py-1.5 rounded-full border border-slate-200">
                       {qrUrl && qrUrl.includes('%2Finvoice%2F') ? '🛡️ Zero-MDR Route' : '⚡ Standard Route'}
